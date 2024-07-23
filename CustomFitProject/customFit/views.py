@@ -51,27 +51,54 @@ class ProductSearchViewSet(viewsets.ViewSet):
 class AddToCartView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, product_id):    # 제품을 장바구니에 추가
+    def post(self, request, product_id):    # 제품을 카트에 추가
         user = request.user
         product = get_object_or_404(Product, product_id=product_id)
         cart = user.cart
 
         if cart.items.count() >= 5:
-            return Response({"error": "장바구니에 담을 수 있는 최대 상품 수는 5개입니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "카트에 담을 수 있는 최대 상품 수는 5개입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if CartItem.objects.filter(cart=cart, product=product).exists():
-            return Response({"error": "이 상품은 이미 장바구니에 있습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "이 상품은 이미 카트에 있습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         CartItem.objects.create(cart=cart, product=product)
-        return Response({"success": "상품이 장바구니에 추가되었습니다."}, status=status.HTTP_201_CREATED)
+        return Response({"success": "상품이 카트에 추가되었습니다."}, status=status.HTTP_201_CREATED)
 
-# 장바구니 목록을 조회하는 API 뷰
+# 카트 목록을 조회하는 API 뷰
 class CartDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):     # 장바구니에 담긴 제품 목록을 반환 
+    def get(self, request):     # 카트에 담긴 제품 목록을 반환 
         user = request.user
         cart = user.cart
         items = cart.items.all()
         serializer = CartItemSerializer(items, many=True)
         return Response(serializer.data)
+
+
+# 상품을 카트에서 삭제하는 기능을 제공하는 API 뷰
+class CartItemDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, product_id):  # 제품을 카트에서 삭제
+        user = request.user
+        product = get_object_or_404(Product, product_id=product_id)
+        cart = user.cart
+
+        try:
+            cart_item = CartItem.objects.get(cart=cart, product=product)
+            cart_item.delete()
+            return Response({"success": "상품이 카트에서 삭제되었습니다."}, status=status.HTTP_204_NO_CONTENT)
+        except CartItem.DoesNotExist:
+            return Response({"error": "카트에 해당 상품이 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+# 카트 안의 모든 상품을 삭제하는 기능을 제공하는 API 뷰      
+class CartClearView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):  # 카트에 있는 모든 제품을 삭제
+        user = request.user
+        cart = user.cart
+        cart.items.all().delete()
+        return Response({"success": "카트가 비워졌습니다."}, status=status.HTTP_204_NO_CONTENT)

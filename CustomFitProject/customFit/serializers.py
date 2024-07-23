@@ -15,6 +15,7 @@ class FoodsCategorySerializer(serializers.ModelSerializer):
         model = FoodCategory
         fields = '__all__'
 
+# 카트 항목을 직렬화
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
 
