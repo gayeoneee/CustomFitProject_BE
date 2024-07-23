@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
+from django.contrib.auth import get_user_model
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -49,7 +50,7 @@ class ProductSearchViewSet(viewsets.ViewSet):
 
 # 상품을 카트에 추가하는 기능을 제공하는 API 뷰
 class AddToCartView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]  # 인증된 사용자만 사용 가능 (로그인)
 
     def post(self, request, product_id):    # 제품을 카트에 추가
         user = request.user
@@ -102,3 +103,39 @@ class CartClearView(APIView):
         cart = user.cart
         cart.items.all().delete()
         return Response({"success": "카트가 비워졌습니다."}, status=status.HTTP_204_NO_CONTENT)
+    
+
+User = get_user_model() # 현재 활성 사용자 모델 반환/ settings.AUTH_USER_MODEL에 지정된 사용자 모델을 반환
+
+# 비교기능
+class CompareProductsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        cart_items = user.cart.items.all()
+
+        if not user.keyword:
+            return Response({"error": "사용자의 키워드가 설정되어 있지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not cart_items:
+            return Response({"error": "카트에 상품이 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        keyword_id = user.keyword.keyword_id
+        if keyword_id == 1:  # 당뇨
+            sorted_items = sorted(cart_items, key=lambda x: x.product.sugars)   #오름차순
+        elif keyword_id == 2:  # 비만
+            sorted_items = sorted(cart_items, key=lambda x: x.product.calories) #오름차순
+        elif keyword_id == 3:  # 고혈압
+            sorted_items = sorted(cart_items, key=lambda x: x.product.sodium)   #오름차순
+        elif keyword_id == 4:  # 근손실
+            sorted_items = sorted(cart_items, key=lambda x: x.product.protein, reverse=True)    #내림차순
+        else:
+            return Response({"error": "알 수 없는 키워드입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        best_product = sorted_items[0].product
+        serializer = ProductSerializer(best_product)
+
+        user.cart.items.all().delete()  # 비교 완료 후 카트 비우기
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
