@@ -18,6 +18,7 @@ class Product(models.Model):
     calories = models.FloatField()  # 열량
     sodium = models.FloatField()    # 나트륨
     sugars = models.FloatField()    # 당류
+    protein = models.FloatField()   # 단백질
     category = models.ForeignKey(FoodCategory, on_delete=models.CASCADE)
 
     def __str__(self):

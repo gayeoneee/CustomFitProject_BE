@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -52,7 +53,7 @@ class AddToCartView(APIView):
 
     def post(self, request, product_id):    # 제품을 장바구니에 추가
         user = request.user
-        product = Product.objects.get(id=product_id)
+        product = get_object_or_404(Product, product_id=product_id)
         cart = user.cart
 
         if cart.items.count() >= 5:
